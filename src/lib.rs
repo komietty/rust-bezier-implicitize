@@ -2,8 +2,7 @@ use nalgebra::{DMatrix, Matrix2, Matrix2x3, Matrix3x2};
 
 mod gaussian_elimination;
 mod qr_decomposition;
-
-fn svd() {}
+mod pesudo_inverse;
 
 // bezout's resultant
 pub fn bezout_resultant(x: f64, y: f64, m1: Matrix2x3<f64>, m2: Matrix2x3<f64>) -> f64 {
