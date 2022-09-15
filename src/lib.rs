@@ -7,44 +7,8 @@ mod qr_decomposition;
 
 pub fn homogeneous2euclidean(h: Vector3<f64>) -> Vector2<f64> {
     assert!(h.z != 0.0);
+    //Vector2::new(h.x / h.z, h.y / h.z)
     Vector2::new(h.x / h.z, h.y / h.z)
-}
-
-// bezout's resultant
-pub fn bezout_resultant(x: f64, y: f64, m1: Matrix2x3<f64>, m2: Matrix2x3<f64>) -> f64 {
-    let mut m = Matrix2x3::<f64>::zeros();
-    m.set_row(0, &(m1.row(0) * x));
-    m.set_row(1, &(m1.row(1) * y));
-    m = m - m2;
-    let mut d = Matrix2::<f64>::zeros();
-    d[(0, 0)] = Matrix2::new(m[(0, 0)], m[(0, 1)], m[(1, 0)], m[(1, 1)]).determinant();
-    d[(1, 0)] = Matrix2::new(m[(0, 0)], m[(0, 2)], m[(1, 0)], m[(1, 2)]).determinant();
-    d[(0, 1)] = Matrix2::new(m[(0, 0)], m[(0, 2)], m[(1, 0)], m[(1, 2)]).determinant();
-    d[(1, 1)] = Matrix2::new(m[(0, 1)], m[(0, 2)], m[(1, 1)], m[(1, 2)]).determinant();
-    d.determinant()
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::bezout_resultant;
-    use nalgebra::{DMatrix, Matrix2, Matrix2x3};
-
-    #[test]
-    fn bezout_resultant_test() {
-        let x = 3.0;
-        let y = 4.5;
-        let m1 = Matrix2x3::new(1.0, 2.0, 3.0, 1.0, 2.0, 3.0);
-        let m2 = Matrix2x3::new(2.0, 4.0, 5.0, 3.0, 1.0, 4.0);
-        let o = bezout_resultant(x, y, m1, m2);
-        println!("b:{}", o);
-        let m3 = Matrix2::new(
-            5.0 * x - 10.0,
-            5.0 * x - y - 7.0,
-            5.0 * x - y - 7.0,
-            -5.0 * x - 2.0 * y + 11.0,
-        );
-        println!("b:{}", m3.determinant())
-    }
 }
 
 pub fn quadratic_bezier_curve(
@@ -56,14 +20,16 @@ pub fn quadratic_bezier_curve(
     p0 * (1.0 - t) * (1.0 - t) + p1 * 2.0 * (1.0 - t) * t + p2 * t * t
 }
 
-pub fn quadratic_bezier_curve_by_lines_of_pencil_0(
+pub fn quadratic_bezier_curve_by_line_in_pencil(
     p0: Vector3<f64>,
     p1: Vector3<f64>,
     p2: Vector3<f64>,
     t: f64,
+    k: f64
 ) -> Vector3<f64> {
-    let l0 = p0.cross(&(2.0 * p1 * (1.0 - t) + p2 * t));
-    l0
+    if      k == 0.0 { p0.cross(&(2.0 * p1 * (1.0 - t) + p2 * t)) }
+    else if k == 1.0 { p2.cross(&(2.0 * p1 * t + p0 * (1.0 - t))) }
+    else { unimplemented!() }
 }
 
 pub fn quadratic_bezier_curve_by_lines_of_pencils(
@@ -74,7 +40,7 @@ pub fn quadratic_bezier_curve_by_lines_of_pencils(
 ) -> Vector3<f64> {
     let l0 = p0.cross(&(2.0 * p1 * (1.0 - t) + p2 * t));
     let l1 = p2.cross(&(2.0 * p1 * t + p0 * (1.0 - t)));
-    l0 * t + l1 * (1.0 - t)
+    l0.cross(&l1)
 }
 
 #[test]
@@ -90,43 +56,43 @@ fn chart_context() {
 
     chart.configure_mesh().draw().unwrap();
 
-    let p0 = Vector3::new(0.2, -0.8, 1.0);
+    let p0 = Vector3::new(-0.5, -0.5, 1.0);
     let p1 = Vector3::new(0.0, 0.0, 1.0);
-    let p2 = Vector3::new(0.8, 0.6, 1.0);
+    let p2 = Vector3::new(0.5, -0.2, 1.0);
 
-    /*
-    for t in 0..1 {
-        let line = quadratic_bezier_curve_by_lines_of_pencil_0(p0, p1, p2, t as f64);
-        let coef = homogeneous2euclidean(line);
+    chart
+        .draw_series(vec![
+                Circle::new((p0.x as f32, p0.y as f32), 2.0, WHITE.filled()),
+                Circle::new((p1.x as f32, p1.y as f32), 2.0, WHITE.filled()),
+                Circle::new((p2.x as f32, p2.y as f32), 2.0, WHITE.filled())
+        ].into_iter()).unwrap();
+
+    for t in 0..2 {
+        let l0 = quadratic_bezier_curve_by_line_in_pencil(p0, p1, p2, t as f64, 0.0);
+        let l1 = quadratic_bezier_curve_by_line_in_pencil(p0, p1, p2, t as f64, 1.0);
+        let it = (-100..100) .map(|x| x as f64 * 0.01);
         chart
             .draw_series(LineSeries::new(
-                (-1..2)
-                .map(|t| t as f64)
-                .map(|x| (x as f32, (coef.x * x + coef.y) as f32)),
+                it.clone().map(|x| (x as f32, (-l0.x / l0.y *  x - l0.z / l0.y) as f32)),
                 &GREEN,
             ))
             .unwrap();
+        chart
+            .draw_series(LineSeries::new(
+                it.clone().map(|x| (x as f32, (-l1.x / l1.y *  x - l1.z / l1.y + 1e-2) as f32)),
+                &BLUE,
+            ))
+            .unwrap();
     }
-    */
-
-    chart
-        .draw_series(LineSeries::new(
-            (0..100)
-                .map(|t| t as f64 / 100.0)
-                .map(|t| quadratic_bezier_curve(p0, p1, p2, t))
-                .map(|ep| (ep.x as f32, ep.y as f32)),
-            &BLUE,
-        ))
-        .unwrap();
 
     chart
         .draw_series(LineSeries::new(
             (0..100)
                 .map(|t| t as f64 / 100.0)
                 .map(|t| quadratic_bezier_curve_by_lines_of_pencils(p0, p1, p2, t))
-                //.map(|hp| homogeneous2euclidean(hp))
+                .map(|hp| homogeneous2euclidean(hp))
                 .map(|ep| (ep.x as f32, ep.y as f32)),
-            &RED,
+            &WHITE,
         ))
         .unwrap();
 
