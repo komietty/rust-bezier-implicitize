@@ -1,50 +1,14 @@
 use nalgebra::{DMatrix, Matrix2, Matrix2x3, Matrix3x2, Vector2, Vector3, Vector4, Matrix4};
 use plotters::prelude::*;
 use rand;
-
-use crate::bezier_implicitizer::{calc_deviation, implicit_bezier_curve, factorial, binary_coef};
-
+use crate::bezier_implicitizer::{calc_deviation, implicit_bezier_curve};
 mod bezier_implicitizer;
-mod gaussian_elimination;
-mod pesudo_inverse;
-mod qr_decomposition;
+mod bezier_curve;
+mod bezier_4;
 
 pub fn homogeneous2euclidean(h: Vector3<f64>) -> Vector2<f64> {
     assert!(h.z != 0.0);
     Vector2::new(h.x / h.z, h.y / h.z)
-}
-
-pub fn quadratic_bezier_curve(
-    p0: Vector3<f64>,
-    p1: Vector3<f64>,
-    p2: Vector3<f64>,
-    t: f64,
-) -> Vector3<f64> {
-    p0 * (1.0 - t) * (1.0 - t) + p1 * 2.0 * (1.0 - t) * t + p2 * t * t
-}
-
-pub fn cubic_bezier_curve(
-    p0: Vector3<f64>,
-    p1: Vector3<f64>,
-    p2: Vector3<f64>,
-    p3: Vector3<f64>,
-    t: f64,
-) -> Vector3<f64> {
-    let a = Vector4::new(t.powi(3), t.powi(2), t, 1.0);
-    let b = Matrix4::new(
-        -1.0,  3.0, -3.0, 1.0,
-         3.0, -6.0,  3.0, 0.0,
-        -3.0,  3.0,  0.0, 0.0, 
-         1.0,  0.0,  0.0, 0.0,
-    );
-    let c = Vector4::new(p0, p1, p2, p3);
-    let d = Vector4::new(
-        a.dot(&b.column(0)), 
-        a.dot(&b.column(1)),
-        a.dot(&b.column(2)), 
-        a.dot(&b.column(3)),
-    );
-    d.x * c.x + d.y * c.y + d.z * c.z + d.w * c.w 
 }
 
 pub fn quadratic_bezier_curve_by_line_in_pencil(
@@ -73,6 +37,7 @@ pub fn quadratic_bezier_curve_by_lines_of_pencils(
     let l1 = p2.cross(&(2.0 * p1 * t + p0 * (1.0 - t)));
     l0.cross(&l1)
 }
+
 #[test]
 fn cubic_test() {
     let bg = RGBColor(41, 45, 62);
@@ -81,25 +46,25 @@ fn cubic_test() {
 
     let mut chart = ChartBuilder::on(&root)
         .margin(10)
-        .build_cartesian_2d(-1f32..1f32, -1f32..1f32)
+        .build_cartesian_2d(-1f32..4f32, -1f32..4f32)
         .unwrap();
 
     chart.configure_mesh().draw().unwrap();
 
-    let p0 = Vector3::new(-0.5, -0.5, 1.0);
-    let p1 = Vector3::new(0.0, 0.0, 1.0);
-    let p2 = Vector3::new(0.5, -0.2, 1.0);
-    let p3 = Vector3::new(0.9, 0.0, 1.0);
+    let p0 = Vector3::new(0.0, 0.0, 1.0);
+    let p1 = Vector3::new(0.0, 1.0, 1.0);
+    let p2 = Vector3::new(1.0, 2.0, 1.0);
+    let p3 = Vector3::new(3.0, 0.0, 1.0);
     let mut points: Vec<Vector3<f64>> = vec![];
     let m1 = implicit_bezier_curve(vec![p0, p1, p2, p3]);
 
     chart
         .draw_series(
             vec![
-                Circle::new((p0.x as f32, p0.y as f32), 1.5, WHITE.filled()),
-                Circle::new((p1.x as f32, p1.y as f32), 1.5, WHITE.filled()),
-                Circle::new((p2.x as f32, p2.y as f32), 1.5, WHITE.filled()),
-                Circle::new((p3.x as f32, p3.y as f32), 1.5, WHITE.filled()),
+                Circle::new((p0.x as f32, p0.y as f32), 2.0, WHITE.filled()),
+                Circle::new((p1.x as f32, p1.y as f32), 2.0, WHITE.filled()),
+                Circle::new((p2.x as f32, p2.y as f32), 2.0, WHITE.filled()),
+                Circle::new((p3.x as f32, p3.y as f32), 2.0, WHITE.filled()),
             ]
             .into_iter(),
         )
@@ -108,7 +73,7 @@ fn cubic_test() {
         .draw_series(LineSeries::new(
             (0..101)
                 .map(|t| t as f64 / 100.0)
-                .map(|t| cubic_bezier_curve(p0, p1, p2, p3, t))
+                .map(|t| bezier_curve::bezier_curve(vec![p0, p1, p2, p3], t))
                 .map(|hp| homogeneous2euclidean(hp))
                 .map(|ep| (ep.x as f32, ep.y as f32)),
             &WHITE,
@@ -117,23 +82,23 @@ fn cubic_test() {
     
     for _ in 0..10000 {
         let p = Vector3::<f64>::new(
-            rand::random::<f64>() * 2.0 - 1.0,
-            rand::random::<f64>() * 2.0 - 1.0,
+            rand::random::<f64>() * 3.0,
+            rand::random::<f64>() * 2.0,
             1.0,
         );
-        if calc_deviation(&m1, p).unwrap().abs() < 0.02 { points.push(p); }
+        if calc_deviation(&m1, p).unwrap().abs() < 1.0 { points.push(p); }
     }
     chart
         .draw_series(
             points
                 .iter()
-                .map(|p| Circle::new((p.x as f32, p.y as f32), 1.5, RED.filled())),
+                .map(|p| Circle::new((p.x as f32, p.y as f32), 2.0, RED.filled())),
         )
         .unwrap();
 }
 
 #[test]
-fn chart_context() {
+fn quadratic_test() {
     let bg = RGBColor(41, 45, 62);
     let root = BitMapBackend::new("chart.png", (480, 480)).into_drawing_area();
     root.fill(&bg).unwrap();
@@ -214,17 +179,17 @@ fn chart_context() {
     let s01 = quadratic_bezier_curve_by_line_in_pencil(p3, p4, p5, 1.0, 0.0);
     let s10 = quadratic_bezier_curve_by_line_in_pencil(p3, p4, p5, 0.0, 1.0);
     let s11 = quadratic_bezier_curve_by_line_in_pencil(p3, p4, p5, 1.0, 1.0);
+
     print!("lines: {}, {}, {}, {}", l00, l01, l10, l11);
     let detA = |x: Vector3<f64>| l00.dot(&x) * l11.dot(&x) - l01.dot(&x) * l10.dot(&x);
     let detB = |x: Vector3<f64>| s00.dot(&x) * s11.dot(&x) - s01.dot(&x) * s10.dot(&x);
-    let detC = |x: Vector3<f64>| (l00 - s00).dot(&x) * (l11 - s11).dot(&x) - (l01 - s01).dot(&x) * (l10 - s10).dot(&x);
     for i in -100..100 {
         let t = i as f64 * 0.1;
-        assert!(detA(quadratic_bezier_curve(p0, p1, p2, t)).abs() < 1e-10);
+        assert!(detA(bezier_curve::bezier_curve(vec![p0, p1, p2], t)).abs() < 1e-10);
     }
 
     let m1 = implicit_bezier_curve(vec![p0, p1, p2]);
-    //let m2 = implicit_bezier_curve(vec![p3, p4, p5]);
+    let m2 = implicit_bezier_curve(vec![p3, p4, p5]);
 
     {
         let mut points: Vec<Vector3<f64>> = vec![];

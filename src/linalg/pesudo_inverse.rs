@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod tests {
-    use nalgebra::{DMatrix, Matrix2x3, Matrix2, SMatrix, Vector3, DVector};
+    use nalgebra::{DMatrix, DVector};
 
     #[test]
     fn pesudo_inverse_test() {
