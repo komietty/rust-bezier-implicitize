@@ -1,35 +1,52 @@
 use nalgebra::{DMatrix, Vector3};
 use crate::bezier_curve::{binary_coef};
 
-pub fn implicit_bezier_curve(ctrl_points: Vec<Vector3<f64>>) -> DMatrix<Vector3<f64>> {
-    let n = ctrl_points.len();
-    let mut mtx = DMatrix::<Vector3<f64>>::zeros(n - 1, n - 1);
-    for i in 0..n - 1 {
-        for j in 0..n - 1 {
+pub fn implicit_bezier_curve(ctrl_points: &Vec<Vector3<f64>>) -> DMatrix<Vector3<f64>> {
+    let n = ctrl_points.len() - 1;
+    let mut mtx = DMatrix::<Vector3<f64>>::zeros(n, n);
+    for i in 0..n {
+        for j in 0..n {
             let mut line = Vector3::<f64>::zeros();
             let s = i + j + 1;
             for l in 0..n {
-                if l > s { continue; }
+                if l >= s { continue; }
                 let m = s - l;
-                if m < n && l < m {
-                    let c = (binary_coef(n - 1, l) * binary_coef(n - 1, m)) as f64;
+                if m <= n && l <= i {
+                    let c = (binary_coef(n, l) * binary_coef(n, m)) as f64;
                     line += c * (ctrl_points[l].cross(&ctrl_points[m]));
-                    /*
-                    println!(
-                        "i: {}, j: {}, l: {}, m: {}, c: {}, line: [{}, {}, {}]",
-                        i, j, l, m, c, line.x, line.y, line.z
-                    );
-                    */
                 }
             }
-                    println!(
-                        "i: {}, j: {}, line: [{}, {}, {}]",
-                        i, j, line.x, line.y, line.z
-                    );
+            println!( "i: {}, j: {}, line: [{}, {}, {}]", i, j, line.x, line.y, line.z);
             mtx[(i, j)] = line;
         }
     }
     mtx
+}
+
+pub fn implicit_bezier_curve_quartic(ctrl_points: &Vec<Vector3<f64>>) -> DMatrix<Vector3<f64>> {
+    DMatrix::<Vector3<f64>>::from_row_slice(4, 4, &[
+        Vector3::new(-4.0, 0.0, 0.0),
+        Vector3::new(-12.0, 6.0, 0.0),
+        Vector3::new(-8.0, 12.0, 0.0),
+        Vector3::new(0.0, 3.0, 0.0),
+        //Vector3::new(0.0, 2.0, 0.0),
+
+        Vector3::new(-12.0, 6.0, 0.0),
+        Vector3::new(-32.0, 36.0, -24.0),
+        Vector3::new(-16.0, 50.0, -48.0),
+        Vector3::new(3.0, 9.0, -9.0),
+
+        Vector3::new(-8.0, 12.0, 0.0),
+        Vector3::new(-16.0, 50.0, -48.0),
+        Vector3::new(4.0, 56.0, -104.0),
+        Vector3::new(12.0, 6.0, -24.0),
+
+        Vector3::new(0.0, 3.0, 0.0),
+        //Vector3::new(0.0, 2.0, 0.0),
+        Vector3::new(4.0, 8.0, -8.0),
+        Vector3::new(12.0, 6.0, -24.0),
+        Vector3::new(8.0, -4.0, -16.0),
+    ])
 }
 
 pub fn calc_deviation(m: &DMatrix<Vector3<f64>>, p: Vector3<f64>) -> Result<f64, &'static str> {
@@ -43,9 +60,8 @@ pub fn calc_deviation(m: &DMatrix<Vector3<f64>>, p: Vector3<f64>) -> Result<f64,
     match n {
         2 => Ok(m1.determinant()),
         3 => {
-            /*
             Ok(m1.determinant())
-            */
+            /*
             let mut d = DMatrix::<f64>::zeros(2, 2);
             let mut m3 = DMatrix::<Vector3<f64>>::from_row_slice(2, 3, &[
                 Vector3::new(-6.0, 3.0, 0.0),
@@ -72,7 +88,11 @@ pub fn calc_deviation(m: &DMatrix<Vector3<f64>>, p: Vector3<f64>) -> Result<f64,
             d[(1, 0)] = m2.clone().remove_column(1).determinant();
             d[(1, 1)] = m2.clone().remove_column(0).determinant();
             Ok(d.determinant())
+            */
         },
+        4 => {
+            Ok(m1.determinant())
+        }
         _ => Err("Neither n <= 1 nor n >= 4 are implemented."),
     }
 }

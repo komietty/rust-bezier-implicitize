@@ -3,7 +3,7 @@ use plotters::prelude::*;
 
 use crate::{
     bezier_curve::bezier_curve,
-    bezier_implicitizer::{calc_deviation, implicit_bezier_curve},
+    bezier_implicitizer::{calc_deviation, implicit_bezier_curve, implicit_bezier_curve_quartic},
     homogeneous2euclidean,
 };
 
@@ -12,7 +12,7 @@ fn quartic_test() {
     let r = BitMapBackend::new("quartic.png", (480, 480)).into_drawing_area();
     let mut c = ChartBuilder::on(&r)
         .margin(10)
-        .build_cartesian_2d(-1f32..4f32, -1f32..4f32)
+        .build_cartesian_2d(-1f32..3f32, -2f32..2f32)
         .unwrap();
 
     r.fill(&RGBColor(41, 45, 62)).unwrap();
@@ -25,6 +25,8 @@ fn quartic_test() {
         Vector3::new(3.0, 2.0, 1.0),
         Vector3::new(2.0, 0.0, 1.0),
     ];
+    let m = implicit_bezier_curve(&points); 
+    let mut o: Vec<Vector3<f64>> = vec![];
 
     c.draw_series(
         points
@@ -43,5 +45,18 @@ fn quartic_test() {
     ))
     .unwrap();
 
-    let m = implicit_bezier_curve(points);
+    for _ in 0..100000 {
+        let p = Vector3::<f64>::new(
+            rand::random::<f64>() * 3.0,
+            rand::random::<f64>() * 4.0 - 2.0,
+            1.0,
+        );
+        if calc_deviation(&m, p).unwrap().abs() < 5.0 { o.push(p); }
+    }
+
+    c.draw_series(
+            o.iter()
+             .map(|p| Circle::new((p.x as f32, p.y as f32), 2.0, GREEN.filled())),
+        )
+        .unwrap();
 }

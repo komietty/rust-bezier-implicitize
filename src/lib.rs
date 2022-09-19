@@ -4,7 +4,7 @@ use rand;
 use crate::bezier_implicitizer::{calc_deviation, implicit_bezier_curve};
 mod bezier_implicitizer;
 mod bezier_curve;
-mod bezier_4;
+mod bezier_test_quartic;
 
 pub fn homogeneous2euclidean(h: Vector3<f64>) -> Vector2<f64> {
     assert!(h.z != 0.0);
@@ -46,7 +46,7 @@ fn cubic_test() {
 
     let mut chart = ChartBuilder::on(&root)
         .margin(10)
-        .build_cartesian_2d(-1f32..4f32, -1f32..4f32)
+        .build_cartesian_2d(-1f32..5f32, -3f32..3f32)
         .unwrap();
 
     chart.configure_mesh().draw().unwrap();
@@ -56,7 +56,7 @@ fn cubic_test() {
     let p2 = Vector3::new(1.0, 2.0, 1.0);
     let p3 = Vector3::new(3.0, 0.0, 1.0);
     let mut points: Vec<Vector3<f64>> = vec![];
-    let m1 = implicit_bezier_curve(vec![p0, p1, p2, p3]);
+    let m1 = implicit_bezier_curve(&vec![p0, p1, p2, p3]);
 
     chart
         .draw_series(
@@ -80,19 +80,19 @@ fn cubic_test() {
         ))
         .unwrap();
     
-    for _ in 0..10000 {
+    for _ in 0..100000 {
         let p = Vector3::<f64>::new(
-            rand::random::<f64>() * 3.0,
-            rand::random::<f64>() * 2.0,
+            rand::random::<f64>() * 6.0,
+            rand::random::<f64>() * 6.0-3.0,
             1.0,
         );
-        if calc_deviation(&m1, p).unwrap().abs() < 1.0 { points.push(p); }
+        if calc_deviation(&m1, p).unwrap().abs() < 0.5 { points.push(p); }
     }
     chart
         .draw_series(
             points
                 .iter()
-                .map(|p| Circle::new((p.x as f32, p.y as f32), 2.0, RED.filled())),
+                .map(|p| Circle::new((p.x as f32, p.y as f32), 2.0, GREEN.filled())),
         )
         .unwrap();
 }
@@ -188,8 +188,8 @@ fn quadratic_test() {
         assert!(detA(bezier_curve::bezier_curve(vec![p0, p1, p2], t)).abs() < 1e-10);
     }
 
-    let m1 = implicit_bezier_curve(vec![p0, p1, p2]);
-    let m2 = implicit_bezier_curve(vec![p3, p4, p5]);
+    let m1 = implicit_bezier_curve(&vec![p0, p1, p2]);
+    let m2 = implicit_bezier_curve(&vec![p3, p4, p5]);
 
     {
         let mut points: Vec<Vector3<f64>> = vec![];
