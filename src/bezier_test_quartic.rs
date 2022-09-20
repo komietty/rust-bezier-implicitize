@@ -3,7 +3,7 @@ use plotters::prelude::*;
 
 use crate::{
     bezier_curve::bezier_curve,
-    bezier_implicitizer::{calc_deviation, implicit_bezier_curve, implicit_bezier_curve_quartic},
+    bezier_implicitizer::{calc_deviation, implicit_bezier_curve},
     homogeneous2euclidean,
 };
 
@@ -45,13 +45,13 @@ fn quartic_test() {
     ))
     .unwrap();
 
-    for _ in 0..100000 {
+    for _ in 0..50000 {
         let p = Vector3::<f64>::new(
             rand::random::<f64>() * 3.0,
             rand::random::<f64>() * 4.0 - 2.0,
             1.0,
         );
-        if calc_deviation(&m, p).unwrap().abs() < 5.0 { o.push(p); }
+        if calc_deviation(&m, p).unwrap().abs() < 1.0 { o.push(p); }
     }
 
     c.draw_series(
