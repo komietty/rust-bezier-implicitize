@@ -59,7 +59,6 @@ pub fn calc_deviation(m: &DMatrix<Vector3<f64>>, p: Vector3<f64>) -> Result<f64,
             */
         },
         4 => {
-            //Ok(m1.determinant())
             let row0 = m.row(0);
             let row1 = m.row(1);
             let row2 = m.row(2);

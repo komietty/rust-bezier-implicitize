@@ -18,19 +18,18 @@ fn quartic_test() {
     r.fill(&RGBColor(41, 45, 62)).unwrap();
     c.configure_mesh().draw().unwrap();
 
-    let points: Vec<Vector3<f64>> = vec![
+    let v: Vec<Vector3<f64>> = vec![
         Vector3::new(0.0, 0.0, 1.0),
         Vector3::new(0.0, 1.0, 1.0),
         Vector3::new(1.0, 2.0, 1.0),
         Vector3::new(3.0, 2.0, 1.0),
         Vector3::new(2.0, 0.0, 1.0),
     ];
-    let m = implicit_bezier_curve(&points); 
+    let m = implicit_bezier_curve(&v);
     let mut o: Vec<Vector3<f64>> = vec![];
 
     c.draw_series(
-        points
-            .iter()
+        v.iter()
             .map(|p| Circle::new((p.x as f32, p.y as f32), 2.0, WHITE.filled())),
     )
     .unwrap();
@@ -38,7 +37,7 @@ fn quartic_test() {
     c.draw_series(LineSeries::new(
         (0..101)
             .map(|t| t as f64 / 100.0)
-            .map(|t| bezier_curve(points.clone(), t))
+            .map(|t| bezier_curve(v.clone(), t))
             .map(|hp| homogeneous2euclidean(hp))
             .map(|ep| (ep.x as f32, ep.y as f32)),
         &WHITE,
@@ -51,12 +50,14 @@ fn quartic_test() {
             rand::random::<f64>() * 4.0 - 2.0,
             1.0,
         );
-        if calc_deviation(&m, p).unwrap().abs() < 1.0 { o.push(p); }
+        if calc_deviation(&m, p).unwrap().abs() < 1.0 {
+            o.push(p);
+        }
     }
 
     c.draw_series(
-            o.iter()
-             .map(|p| Circle::new((p.x as f32, p.y as f32), 2.0, GREEN.filled())),
-        )
-        .unwrap();
+        o.iter()
+            .map(|p| Circle::new((p.x as f32, p.y as f32), 2.0, GREEN.filled())),
+    )
+    .unwrap();
 }
