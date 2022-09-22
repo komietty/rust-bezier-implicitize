@@ -89,11 +89,11 @@ fn row_null(a: &DMatrix<isize>, k: usize) -> Decomposed {
     let mut b = a.clone();
     let mut p = DMatrix::<isize>::identity(a.nrows(), a.nrows());
     let mut q = DMatrix::<isize>::identity(a.ncols(), a.ncols());
-    for i in k+1..a.nrows() {
+    for i in k + 1..a.nrows() {
         let d = a[(i, k)] / a[(k, k)];
-        p = ec(i, k, -d, a.nrows());
-        b = &p * b;
-        p = &p * &p;
+        let e = ec(i, k, -d, a.nrows());
+        b = &e * &b;
+        p = &e * &p;
     }
     Decomposed { p: p, q: q, b: b }
 }
@@ -102,11 +102,11 @@ fn col_null(a: &DMatrix<isize>, k: usize) -> Decomposed {
     let mut b = a.clone();
     let mut p = DMatrix::<isize>::identity(a.nrows(), a.nrows());
     let mut q = DMatrix::<isize>::identity(a.ncols(), a.ncols());
-    for i in k+1..a.ncols() {
-        let d = a[(k, i)] / a[(k, k)];
-        let v = ec(k, i, -d, a.ncols());
-        b = &b * &v;
-        q = &q * &v;
+    for j in k+1..a.ncols() {
+        let d = a[(k, j)] / a[(k, k)];
+        let e = ec(k, j, -d, a.ncols());
+        b = &b * &e;
+        q = &q * &e;
     }
     Decomposed { p: p, q: q, b: b }
 }
@@ -138,43 +138,58 @@ pub fn smith_normalize(a: &DMatrix<isize>) -> Decomposed {
             tmp += 1;
             if tmp > 100 { break; }
             
-            let d = swap_min(&a, k);
-            p = &p * &d.p;
-            q = &d.q * &q;
-            println!("p: {}, q: {}, b: {}", d.p, d.q, d.b);
-            let d = row_null(&d.b, k);
-            if is_zeros(d.b.slice((k + 1, k), (nr - k - 1, 1))) {
-                let d = col_null(&d.b, k);
-                p = &p * &d.p;
-                q = &q * &d.q;
-                if is_zeros(d.b.slice((k, k + 1), (1, nc - k - 1))) {
-                    if is_zeros(d.b.slice((k + 1, k + 1), (nr - k - 1, nc - k - 1))) {
-                        return Decomposed { p: p, q: q, b: d.b };
+            let d1 = swap_min(&a, k);
+            p = &p * &d1.p;
+            q = &d1.q * &q;
+            println!("b_swaped: {}", d1.b);
+            let d2 = row_null(&d1.b, k);
+            println!("b_nulled: {}", d2.b);
+            println!("slice_2: {}", d2.b.slice((k + 1, k), (nr - k - 1, 1)));
+            if is_zeros(d2.b.slice((k + 1, k), (nr - k - 1, 1))) {
+                let d3 = col_null(&d2.b, k);
+                p = &p * &d3.p;
+                q = &d3.q * &q;
+                println!("b_col_nulled: {}", d3.b);
+                println!("p: {}, dp: {}", p, d3.p);
+                println!("q: {}, dq: {}", q, d3.q);
+                println!("slice_3: {}", d3.b.slice((k, k + 1), (1, nc - k - 1)));
+                if is_zeros(d3.b.slice((k, k + 1), (1, nc - k - 1))) {
+                    println!("slice_4: {}", d3.b.slice((k + 1, k + 1), (nr - k - 1, nc - k - 1)));
+                    if is_zeros(d3.b.slice((k + 1, k + 1), (nr - k - 1, nc - k - 1))) {
+                        return Decomposed { p: p, q: q, b: d3.b };
                     } else {
-                        let d = rem_modulo(&d.b, k);
-                        p = &p * d.p;
-                        q = &q * d.q;
+                        let d4 = rem_modulo(&d3.b, k);
+                        p = &p * d4.p;
+                        q = &q * d4.q;
+                //println!("b_col_nulled: {}", d4.b);
+                //println!("p: {}, dp: {}", p, d4.p);
+                //println!("q: {}, dq: {}", q, d4.q);
+                        panic!("------panipani------");
                     }
                 } else {
-                    a = d.b;
+                    a = d3.b;
                 }
             } else {
-                a = d.b;
+                a = d1.b;
             }
         }
         /*
-        panic!("aaaaaaaaa");
         */
     }
     Decomposed { p: p, q: q, b: a }
 }
 
 #[test]
-fn smith_norm_test() {
+fn smith_all() {
     let m = DMatrix::from_row_slice(3, 4, &[
         5, 2, 3, 3,
         4, 2, -1, 3,
         3, 3, 3, 3
+        ]
+    );
+    let m = DMatrix::from_row_slice(2, 3, &[
+        3, 2, 2,
+        2, 1, 2,
         ]
     );
     let res = smith_normalize(&m);
@@ -189,8 +204,8 @@ fn smith_swap_test() {
         3, 3, 3, 3
         ]
     );
-    let res = swap_min(&m, 1);
-    println!("p: {}, q: {}, b:{}", res.p, res.q, res.b);
+    let r = swap_min(&m, 0);
+    assert!(&r.p * m * &r.q == r.b);
 }
 
 #[test]
@@ -201,8 +216,9 @@ fn smith_null_row() {
         3, 3, 3, 3
         ]
     );
-    let res = row_null(&m, 0);
-    println!("p: {}, q: {}, b:{}", res.p, res.q, res.b);
+    let r = row_null(&m, 0);
+    assert!(&r.p * m * &r.q == r.b);
+    println!("p: {}, q: {}, b:{}", r.p, r.q, r.b);
 }
 
 #[test]
@@ -213,8 +229,9 @@ fn smith_null_col() {
         3, 3, 3, 3
         ]
     );
-    let res = col_null(&m, 0);
-    println!("p: {}, q: {}, b:{}", res.p, res.q, res.b);
+    let r = col_null(&m, 0);
+    assert!(&r.p * m * &r.q == r.b);
+    println!("p: {}, q: {}, b:{}", r.p, r.q, r.b);
 }
 
 #[test]
