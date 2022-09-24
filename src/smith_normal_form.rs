@@ -23,11 +23,11 @@ pub fn iamin_full(m: DMatrixSlice<isize>) -> (usize, usize) {
 }
 
 pub fn is_zeros(m: DMatrixSlice<isize>) -> bool {
-    let (nrows, ncols) = m.shape();
-    for j in 0..ncols {
-        for i in 0..nrows {
-            let el = unsafe { m.get_unchecked((i, j)) };
-            if *el != 0 {
+    let (nr, nc) = m.shape();
+    for j in 0..nc {
+        for i in 0..nr {
+            let e = unsafe { m.get_unchecked((i, j)) };
+            if *e != 0 {
                 return false;
             }
         }
@@ -36,11 +36,11 @@ pub fn is_zeros(m: DMatrixSlice<isize>) -> bool {
 }
 
 pub fn is_mod_zeros(m: DMatrixSlice<isize>, v: isize) -> bool {
-    let (nrows, ncols) = m.shape();
-    for j in 0..ncols {
-        for i in 0..nrows {
-            let el = unsafe { m.get_unchecked((i, j)) };
-            if *el % v != 0 {
+    let (nr, nc) = m.shape();
+    for j in 0..nc {
+        for i in 0..nr {
+            let e = unsafe { m.get_unchecked((i, j)) };
+            if *e % v != 0 {
                 return false;
             }
         }
@@ -50,7 +50,7 @@ pub fn is_mod_zeros(m: DMatrixSlice<isize>, v: isize) -> bool {
 
 pub fn modulo_full(m: DMatrixSlice<isize>) -> (usize, usize) {
     assert!(!m.is_empty(), "The input matrix must not be empty.");
-    let mut the_val = unsafe { m.get_unchecked((0, 0)) };
+    let the_val = unsafe { m.get_unchecked((0, 0)) };
     let mut the_ij = (0, 0);
     for j in 0..m.ncols() {
         for i in 0..m.nrows() {
@@ -103,7 +103,7 @@ fn swap_min(a: &DMatrix<isize>, k: usize) -> Decomposed {
 fn row_null(a: &DMatrix<isize>, k: usize) -> Decomposed {
     let mut b = a.clone();
     let mut p = DMatrix::<isize>::identity(a.nrows(), a.nrows());
-    let mut q = DMatrix::<isize>::identity(a.ncols(), a.ncols());
+    let q = DMatrix::<isize>::identity(a.ncols(), a.ncols());
     for i in k + 1..a.nrows() {
         let d = a[(i, k)] / a[(k, k)];
         let e = ec(i, k, -d, a.nrows());
@@ -115,8 +115,8 @@ fn row_null(a: &DMatrix<isize>, k: usize) -> Decomposed {
 
 fn col_null(a: &DMatrix<isize>, k: usize) -> Decomposed {
     let mut b = a.clone();
-    let mut p = DMatrix::<isize>::identity(a.nrows(), a.nrows());
     let mut q = DMatrix::<isize>::identity(a.ncols(), a.ncols());
+    let p = DMatrix::<isize>::identity(a.nrows(), a.nrows());
     for j in k + 1..a.ncols() {
         let d = a[(k, j)] / a[(k, k)];
         let e = ec(k, j, -d, a.ncols());
@@ -149,9 +149,8 @@ pub fn smith_normalize(a: &DMatrix<isize>) -> Decomposed {
         if is_zeros(b.slice((k, k), (nr - k, nc - k))) { break; }
         loop {
             let d1 = swap_min(&b, k);
-            (p, q) = (&d1.p * &p, &q * &d1.q);
             let d2 = row_null(&d1.b, k);
-            (p, q) = (&d2.p * &p, &q * &d2.q);
+            (p, q) = (&d2.p * &d1.p * &p, &q * &d1.q * &d2.q);
 
             if is_zeros(d2.b.slice((k + 1, k), (nr - k - 1, 1))) {
                 let d3 = col_null(&d2.b, k);
@@ -162,8 +161,7 @@ pub fn smith_normalize(a: &DMatrix<isize>) -> Decomposed {
                         break;
                     } else {
                         let d4 = rem_mod(&d3.b, k);
-                        (p, q) = (&d4.p * &p, &q * &d4.q);
-                        b = d4.b;
+                        (p, q, b) = (&d4.p * &p, &q * &d4.q, d4.b);
                     }
                 } else { b = d3.b; }
             } else { b = d2.b; }
@@ -187,6 +185,9 @@ fn smith_all() {
     let r1 = smith_normalize(&m1); 
     let r2 = smith_normalize(&m2); 
     let r3 = smith_normalize(&m3); 
+    println!("p: {}", r3.p);
+    println!("q: {}", r3.q);
+    println!("b: {}", r3.b);
     assert!(&r1.p * m1 * &r1.q == r1.b);
     assert!(&r2.p * m2 * &r2.q == r2.b);
     assert!(&r3.p * m3 * &r3.q == r3.b);
