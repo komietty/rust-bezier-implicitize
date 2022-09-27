@@ -3,7 +3,7 @@ use plotters::prelude::*;
 
 use crate::{
     bezier_curve::bezier_curve,
-    bezier_implicitizer::{calc_deviation, implicit_bezier_curve},
+    bezier_implicitizer::{implicitize_bezier, calc_deviation, reduce_rank},
     homogeneous2euclidean,
 };
 
@@ -32,7 +32,7 @@ fn quartic_test() {
         //Vector3::new(3.0, 1.0, 1.0),
         //Vector3::new(2.0, 0.0, 1.0),
     ];
-    let m = implicit_bezier_curve(&v);
+    let m = reduce_rank(&implicitize_bezier(&v));
     let mut o: Vec<Vector3<f64>> = vec![];
 
     c.draw_series(

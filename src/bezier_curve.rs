@@ -1,4 +1,9 @@
-use nalgebra::Vector3;
+use nalgebra::{Vector2, Vector3};
+
+pub fn homogeneous2euclidean(h: Vector3<f64>) -> Vector2<f64> {
+    assert!(h.z != 0.0);
+    Vector2::new(h.x / h.z, h.y / h.z)
+}
 
 pub fn factorial(n: usize) -> usize {
     let mut f = 1;
