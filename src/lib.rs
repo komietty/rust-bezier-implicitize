@@ -5,7 +5,6 @@ use crate::bezier_implicitizer::{calc_deviation, implicit_bezier_curve};
 mod bezier_implicitizer;
 mod bezier_curve;
 mod bezier_test_quartic;
-mod smith_normal_form;
 
 pub fn homogeneous2euclidean(h: Vector3<f64>) -> Vector2<f64> {
     assert!(h.z != 0.0);

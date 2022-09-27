@@ -24,6 +24,13 @@ fn quartic_test() {
         Vector3::new(1.0, 2.0, 1.0),
         Vector3::new(3.0, 2.0, 1.0),
         Vector3::new(2.0, 0.0, 1.0),
+        //Vector3::new(0.0, 0.0, 1.0),
+        //Vector3::new(0.0, 1.0, 1.0),
+        //Vector3::new(0.5, 1.5, 1.0),
+        //Vector3::new(1.0, 2.0, 1.0),
+        //Vector3::new(3.0, 2.0, 1.0),
+        //Vector3::new(3.0, 1.0, 1.0),
+        //Vector3::new(2.0, 0.0, 1.0),
     ];
     let m = implicit_bezier_curve(&v);
     let mut o: Vec<Vector3<f64>> = vec![];
