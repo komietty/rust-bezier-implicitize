@@ -10,4 +10,4 @@ This is still a work in progress, for over 4-dimentional bezier curve this is no
 Requires nalgebra(0.31.1~).
 
 ## References
-[Curve implicitization using moving lines - Sederberg et al.]()
+[Curve implicitization using moving lines - Sederberg et al.](https://www.sciencedirect.com/science/article/abs/pii/0167839694900590)
